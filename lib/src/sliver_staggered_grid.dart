@@ -502,6 +502,84 @@ class SliverGridStaggeredTileLayout extends SliverGridLayout {
   }
 }
 
+/// A sliver that places multiple box children in a two dimensional arrangement.
+/// The sizes of children can be different.
+///
+/// [RenderSliverGrid] places its children in arbitrary positions determined by
+/// [gridDelegate]. Each child is forced to have the size specified by the
+/// [gridDelegate].
+///
+/// See also:
+///
+///  * [RenderSliverList], which places its children in a linear
+///    array.
+///  * [RenderSliverFixedExtentList], which places its children in a linear
+///    array with a fixed extent in the main axis.
+class RenderSliverStaggeredGrid extends RenderSliverMultiBoxAdaptor{
+  /// Creates a sliver that contains multiple box children that whose size and
+  /// position are determined by a delegate.
+  ///
+  /// The [childManager] and [gridDelegate] arguments must not be null.
+  RenderSliverStaggeredGrid({
+    @required RenderSliverBoxChildManager childManager,
+    @required SliverStaggeredGridDelegate gridDelegate,
+  }) : assert(gridDelegate != null),
+        _gridDelegate = gridDelegate,
+        super(childManager: childManager);
+
+  @override
+  void setupParentData(RenderObject child) {
+    if (child.parentData is! SliverGridParentData)
+      child.parentData = new SliverGridParentData();
+  }
+
+  /// The delegate that controls the size and position of the children.
+  SliverStaggeredGridDelegate get gridDelegate => _gridDelegate;
+  SliverStaggeredGridDelegate _gridDelegate;
+  set gridDelegate(SliverStaggeredGridDelegate value) {
+    assert(value != null);
+    if (_gridDelegate == value)
+      return;
+    if (value.runtimeType != _gridDelegate.runtimeType ||
+        value.shouldRelayout(_gridDelegate))
+      markNeedsLayout();
+    _gridDelegate = value;
+  }
+
+  @override
+  double childCrossAxisPosition(RenderBox child) {
+    final SliverGridParentData childParentData = child.parentData;
+    return childParentData.crossAxisOffset;
+  }
+
+  @override
+  void performLayout() {
+    childManager.didStartLayout();
+    childManager.setDidUnderflow(false);
+
+    final double scrollOffset = constraints.scrollOffset;
+    assert(scrollOffset >= 0.0);
+    final double remainingPaintExtent = constraints.remainingPaintExtent;
+    assert(remainingPaintExtent >= 0.0);
+    final double targetEndScrollOffset = scrollOffset + remainingPaintExtent;
+
+    final SliverGridLayout layout = _gridDelegate.getLayout(constraints);
+  }
+
+}
+
+@immutable
+abstract class SliverStaggeredGridLayout {
+  /// Abstract const constructor. This constructor enables subclasses to provide
+  /// const constructors so that they can be used in const expressions.
+  const SliverStaggeredGridLayout();
+
+  List<int> getVisibleChildIndexesForScrollOffsets(Offset scrollOffset, Offset targetEndScrollOffset);
+
+  /// The size and position of the child with the given index.
+  SliverGridGeometry getGeometryForChildIndex(int index);
+}
+
 class _Block {
   const _Block(this.index, this.crossAxisCount, this.minOffset, this.maxOffset);
 
